@@ -8,89 +8,41 @@ HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Roblox Lookup Pro</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #f2f2f2;
-            text-align: center;
-        }
-
-        .box {
-            margin-top: 70px;
-        }
-
-        input {
-            width: 300px;
-            padding: 12px;
-            border-radius: 20px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            padding: 12px 18px;
-            border-radius: 20px;
-            border: none;
-            background: #4285F4;
-            color: white;
-        }
-
-        .card {
-            margin-top: 20px;
-            display: inline-block;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            width: 350px;
-        }
-
-        img {
-            border-radius: 10px;
-        }
-
-        .small {
-            font-size: 14px;
-            color: gray;
-        }
-
-        a {
-            color: #4285F4;
-        }
-    </style>
+    <title>Roblox Lookup</title>
 </head>
-<body>
+<body style="font-family: Arial; text-align:center; background:#f2f2f2;">
 
-<div class="box">
-    <h1>🔎 Roblox Lookup Pro</h1>
+<h1>🔎 Roblox Lookup</h1>
 
-    <form action="/search">
-        <input name="username" placeholder="Pseudo Roblox">
-        <button>Rechercher</button>
-    </form>
+<form action="/search">
+    <input name="username" placeholder="Pseudo Roblox">
+    <button>Rechercher</button>
+</form>
 
-    {% if data %}
-    <div class="card">
-        <img src="{{avatar}}" width="150"><br><br>
+<br>
 
-        <h2>{{data["name"]}}</h2>
-        <p class="small">Display: {{data["displayName"]}}</p>
-        <p>ID: {{data["id"]}}</p>
-        <p>Créé le: {{data["created"]}}</p>
+{% if data %}
+<div style="background:white; display:inline-block; padding:20px; border-radius:10px; width:320px;">
+    <img src="{{avatar}}" width="150"><br><br>
 
-        <hr>
+    <h2>{{data["name"]}}</h2>
 
-        <p><b>🏷 Groupes:</b> {{groups}}</p>
-        <p><b>🎖 Badges:</b> {{badges}}</p>
+    <p><b>Display Name:</b> {{data["displayName"]}}</p>
+    <p><b>ID:</b> {{data["id"]}}</p>
+    <p><b>Créé le:</b> {{data["created"]}}</p>
 
-        <hr>
+    <p><b>Statut:</b> {{status}}</p>
+    <p><b>Friends (approx):</b> {{friends}}</p>
+    <p><b>Followers:</b> {{followers}}</p>
+    <p><b>Following:</b> {{following}}</p>
 
-        <a href="https://www.roblox.com/users/{{data['id']}}/profile" target="_blank">
-            Voir profil Roblox
-        </a>
-    </div>
-    {% endif %}
+    <br>
+
+    <a href="https://www.roblox.com/users/{{data['id']}}/profile" target="_blank">
+        🔗 Voir profil Roblox
+    </a>
 </div>
+{% endif %}
 
 </body>
 </html>
@@ -115,19 +67,16 @@ def get_avatar(uid):
     )
     return r.json()["data"][0]["imageUrl"]
 
-def get_groups(uid):
-    r = requests.get(f"https://groups.roblox.com/v2/users/{uid}/groups/roles")
-    data = r.json()
-    if "data" not in data:
-        return "Privé / Aucun"
-    return len(data["data"])
+def get_social(uid):
+    followers = requests.get(f"https://friends.roblox.com/v1/users/{uid}/followers/count").json().get("count", "N/A")
+    following = requests.get(f"https://friends.roblox.com/v1/users/{uid}/followings/count").json().get("count", "N/A")
 
-def get_badges(uid):
-    r = requests.get(f"https://badges.roblox.com/v1/users/{uid}/badges?limit=10")
+    return followers, following
+
+def get_status(uid):
+    r = requests.get(f"https://users.roblox.com/v1/users/{uid}")
     data = r.json()
-    if "data" not in data:
-        return "0"
-    return len(data["data"])
+    return data.get("description", "Aucun statut")
 
 @app.route("/")
 def home():
@@ -143,8 +92,8 @@ def search():
 
     info = get_user_info(uid)
     avatar = get_avatar(uid)
-    groups = get_groups(uid)
-    badges = get_badges(uid)
+    followers, following = get_social(uid)
+    status = get_status(uid)
 
     return HTML.replace("{% if data %}", "").replace("{% endif %}", "")
 
