@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template_string
 import requests
 import os
 
@@ -21,25 +21,19 @@ HTML = """
 
 <br>
 
-{% if data %}
-<div style="background:white; display:inline-block; padding:20px; border-radius:10px; width:320px;">
+{% if user %}
+<div style="background:white; display:inline-block; padding:20px; border-radius:10px;">
     <img src="{{avatar}}" width="150"><br><br>
 
-    <h2>{{data["name"]}}</h2>
-
-    <p><b>Display Name:</b> {{data["displayName"]}}</p>
-    <p><b>ID:</b> {{data["id"]}}</p>
-    <p><b>Créé le:</b> {{data["created"]}}</p>
-
-    <p><b>Statut:</b> {{status}}</p>
-    <p><b>Friends (approx):</b> {{friends}}</p>
-    <p><b>Followers:</b> {{followers}}</p>
-    <p><b>Following:</b> {{following}}</p>
+    <h2>{{user["name"]}}</h2>
+    <p><b>Display:</b> {{user["displayName"]}}</p>
+    <p><b>ID:</b> {{user["id"]}}</p>
+    <p><b>Créé le:</b> {{user["created"]}}</p>
 
     <br>
 
-    <a href="https://www.roblox.com/users/{{data['id']}}/profile" target="_blank">
-        🔗 Voir profil Roblox
+    <a href="https://www.roblox.com/users/{{user['id']}}/profile" target="_blank">
+        Voir profil Roblox
     </a>
 </div>
 {% endif %}
@@ -67,20 +61,9 @@ def get_avatar(uid):
     )
     return r.json()["data"][0]["imageUrl"]
 
-def get_social(uid):
-    followers = requests.get(f"https://friends.roblox.com/v1/users/{uid}/followers/count").json().get("count", "N/A")
-    following = requests.get(f"https://friends.roblox.com/v1/users/{uid}/followings/count").json().get("count", "N/A")
-
-    return followers, following
-
-def get_status(uid):
-    r = requests.get(f"https://users.roblox.com/v1/users/{uid}")
-    data = r.json()
-    return data.get("description", "Aucun statut")
-
 @app.route("/")
 def home():
-    return HTML
+    return render_template_string(HTML)
 
 @app.route("/search")
 def search():
@@ -88,14 +71,12 @@ def search():
 
     uid = get_user_id(username)
     if not uid:
-        return HTML.replace("{% if data %}", "").replace("{% endif %}", "")
+        return render_template_string(HTML, user=None)
 
-    info = get_user_info(uid)
+    user = get_user_info(uid)
     avatar = get_avatar(uid)
-    followers, following = get_social(uid)
-    status = get_status(uid)
 
-    return HTML.replace("{% if data %}", "").replace("{% endif %}", "")
+    return render_template_string(HTML, user=user, avatar=avatar)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
